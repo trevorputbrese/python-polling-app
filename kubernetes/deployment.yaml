@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    name: python-polling-app
+  name: python-polling-app
+spec:
+  ports:
+    - port: 80
+      targetPort: 8000
+  selector:
+    name: python-polling-app
+  type: LoadBalancer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: python-polling-app
+  labels:
+    name: python-polling-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: python-polling-app
+  template:
+    metadata:
+      labels:
+        name: python-polling-app
+    spec:
+      containers:
+      - name: python-polling-app
+        image: harbor.trvharbor.com/supply-chain-images/test10@sha256:59484c0a76f8aecf1d138d2aa5c8ccc2e1889035625c7fb1cef6cfe5d89d5960
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+    
