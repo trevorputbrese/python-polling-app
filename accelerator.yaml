@@ -8,93 +8,60 @@ accelerator:
   - polling
 
   # options for the UI
-  options:
-  - name: deploymentType
-    inputType: select
-    choices:
-    - value: workload
-      text: TAP workload
-    - value: k8s-simple
-      text: Kubernetes deployment and service
-    - value: none
-      text: Skip Kubernetes deployment
-    defaultValue: workload
-    required: true
+options:
+    - name: title
+      label: Title
+      display: true
+      description: Title text for the application
+      inputType: text
+      dataType: string
+      defaultValue: "Python polls app"
+
+    - name: gitUrl
+      label: Git Repository URL
+      display: true
+      description: Git Repository URL of the application's source code
+      inputType: text
+      dataType: string
+      defaultValue: "https://github.com/trevorputbrese/python-polling-app.git"
+
+    - name: gitBranch
+      label: Git Repository Branch
+      display: true
+      description: Git Repository Branch of the application's source code
+      inputType: text
+      dataType: string
+      defaultValue: "main"
 
 engine:
   merge:
     - include: [ "**" ]
-      exclude: [ "pom.xml", "readme.md", "kubernetes/**", "catalog/*.yaml", ".github/**", "build.gradle*", "settings.gradle*", "gradlew*", "gradle/**" ]
-    - include: [ "pom.xml" ]
+      exclude: [ "tap/workload.yaml", "demo/**", "src/main/resources/application.yaml", "catalog/*.yaml" ]
+    - include: [ "tap/workload.yaml" ]
       chain:
-      - type: ReplaceText
-        substitutions:
-        - text: spring-petclinic
-          with: "#artifactId"
-    - include: [ "kubernetes/k8s/deployment.yaml", "kubernetes/k8s/service.yaml" ]
-      condition: "#deploymentType == 'k8s-simple'"
+        - type: ReplaceText
+          substitutions:
+            - text: https://github.com/tanzu-end-to-end/spring-sensors.git
+              with: "#gitUrl"
+            - text: main
+              with: "#gitBranch"
+        - type: RewritePath
+          rewriteTo: "'config/' + #filename"
+    - include: [ "src/main/resources/application.yaml" ]
       chain:
-      - type: ReplaceText
-        substitutions:
-        - text: spring-petclinic
-          with: "#artifactId"
-      - type: RewritePath
-        rewriteTo: "'kubernetes/' + #filename"
-    - include: [ "kubernetes/k8s/Tiltfile" ]
-      condition: "#deploymentType == 'k8s-simple'"
+        - type: ReplaceText
+          substitutions:
+             - text: Sensor Database
+               with: "#title"
+    - include: [ "demo/publisher-deployment.yaml", "demo/publisher-image.yaml" ]
       chain:
-      - type: ReplaceText
-        substitutions:
-        - text: spring-petclinic
-          with: "#artifactId"
-      - type: RewritePath
-        rewriteTo: "#filename"
-    - include: [ "kubernetes/tap/workload.yaml" ]
-      condition: "#deploymentType == 'workload'"
-      chain:
-      - type: ReplaceText
-        substitutions:
-        - text: ": spring-petclinic"
-          with: "': ' + #artifactId"
-      - type: RewritePath
-        rewriteTo: "'config/' + #filename"
+        - type: ReplaceText
+          substitutions:
+            - text: dev.local/spring-sensors-publisher
+              with: "#publisherRepository"
     - include: [ "catalog/*.yaml" ]
-      condition: "#deploymentType == 'workload'"
       chain:
       - type: ReplaceText
         substitutions:
-        - text: spring-petclinic
+        - text: spring-sensors
           with: "#artifactId"
-    - name: README
-      type: Combo
-      onConflict: Append
-      sources:
-      - include: [ "readme.md"]
-        chain:
-        - type: ReplaceText
-          substitutions:
-          - text: '## Running petclinic locally'
-            with: |-
-              '## Running petclinic locally
-              
-              > *Note:* The beginning of this `readme.md` file is from the [original Spring PetClinic](https://github.com/spring-projects/spring-petclinic.git) sample app.              
-              > To see how to deploy this Accelerator Sample version of Spring PetClinic, go to [Deploying to Kubernetes](#deploying-to-kubernetes)
-              '
-      - include: [ "kubernetes/k8s/DEPLOYING.md" ]
-        condition: "#deploymentType == 'k8s-simple'"
-        chain:
-        - type: ReplaceText
-          substitutions:
-          - text: spring-petclinic
-            with: "#artifactId"
-        - type: RewritePath
-          rewriteTo: "'readme.md'"
-      - include: [ "kubernetes/tap/DEPLOYING.md" ]
-        condition: "#deploymentType == 'workload'"
-        chain:
-        - type: ReplaceText
-          substitutions:
-          - text: spring-petclinic
-            with: "#artifactId"
-        - type: RewritePath
-          rewriteTo: "'readme.md'"
